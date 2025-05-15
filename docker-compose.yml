@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: priembot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  browserless:
+    image: ghcr.io/browserless/chromium
+    container_name: browserless
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
