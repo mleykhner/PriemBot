@@ -6,9 +6,10 @@ import (
 	"PriemBot/storage/models"
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
 
 	tele "gopkg.in/telebot.v4"
 )
@@ -35,6 +36,7 @@ func (h *Handlers) RegisterHandlers() {
 	bot.Handle("/start", h.handleStartMessage)
 	bot.Handle("/newop", h.handleNewOpMessage)
 	bot.Handle("/faq", h.handleFAQ)
+	bot.Handle("/info", h.handleInfo)
 	// Обработка текстовых сообщений
 	bot.Handle(tele.OnText, h.handleTextMessage)
 
@@ -362,6 +364,10 @@ func (h *Handlers) handleFAQ(c tele.Context) error {
 	}
 	markup := &tele.ReplyMarkup{InlineKeyboard: menu}
 	return c.Send("Выберите вопрос:", markup)
+}
+
+func (h *Handlers) handleInfo(c tele.Context) error {
+	return c.Send(h.faqManager.Info())
 }
 
 func (h *Handlers) handleFAQBtn(c tele.Context) error {

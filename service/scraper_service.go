@@ -1,18 +1,20 @@
 package service
 
 import (
+	"PriemBot/config"
 	"PriemBot/scraper/models"
 	models2 "PriemBot/storage/models"
 	"PriemBot/storage/repository"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	tele "gopkg.in/telebot.v4"
-	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"os"
 	"time"
+
+	tele "gopkg.in/telebot.v4"
+	"gorm.io/gorm"
 )
 
 type ScraperService struct {
@@ -20,16 +22,16 @@ type ScraperService struct {
 	userRepo    repository.UserRepository
 	bot         *tele.Bot
 	db          *gorm.DB
-	jsFilePath  string
+	config      *config.BrowserlessConfig
 }
 
-func NewScraperService(articleRepo repository.ArticleRepository, userRepo repository.UserRepository, bot *tele.Bot, db *gorm.DB, jsFilePath string) *ScraperService {
+func NewScraperService(articleRepo repository.ArticleRepository, userRepo repository.UserRepository, bot *tele.Bot, db *gorm.DB, config *config.BrowserlessConfig) *ScraperService {
 	return &ScraperService{
 		articleRepo: articleRepo,
 		userRepo:    userRepo,
 		bot:         bot,
 		db:          db,
-		jsFilePath:  jsFilePath,
+		config:      config,
 	}
 }
 
@@ -46,11 +48,11 @@ func (s *ScraperService) StartScheduler() {
 }
 
 func (s *ScraperService) TryRunAndNotify() {
-	js, err := os.ReadFile(s.jsFilePath)
+	js, err := os.ReadFile(s.config.FilePath)
 	if err != nil {
 		return
 	}
-	results, err := RunBrowserless(string(js)) // функцию см. выше
+	results, err := s.RunBrowserless(string(js)) // функцию см. выше
 	if err != nil {
 		return
 	}
@@ -76,9 +78,10 @@ func (s *ScraperService) TryRunAndNotify() {
 	}
 }
 
-func RunBrowserless(js string) ([]models.ScraperResultItem, error) {
+func (s *ScraperService) RunBrowserless(js string) ([]models.ScraperResultItem, error) {
 	reqBody, _ := json.Marshal(models.Request{Code: string(js)})
-	resp, err := http.Post("http://localhost:3000/function", "application/json", bytes.NewBuffer(reqBody))
+	url := fmt.Sprintf("%s/function", s.config.Host)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, err
 	}

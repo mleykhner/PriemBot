@@ -1,12 +1,14 @@
 package faq
 
 import (
+	"PriemBot/config"
 	"PriemBot/faq/models"
-	"github.com/fsnotify/fsnotify"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"sync"
+
+	"github.com/fsnotify/fsnotify"
+	"gopkg.in/yaml.v3"
 )
 
 type Manager struct {
@@ -16,8 +18,8 @@ type Manager struct {
 	mu       sync.RWMutex
 }
 
-func NewFAQManager(path string) (*Manager, error) {
-	m := &Manager{path: path}
+func NewFAQManager(config *config.FAQConfig) (*Manager, error) {
+	m := &Manager{path: config.FilePath}
 	if err := m.reload(); err != nil {
 		return nil, err
 	}
@@ -88,4 +90,8 @@ func (m *Manager) Get(id int) (models.FAQ, bool) {
 	defer m.mu.RUnlock()
 	f, ok := m.faqIndex[id]
 	return f, ok
+}
+
+func (m *Manager) Info() string {
+	return m.faqList.Info
 }

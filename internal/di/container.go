@@ -24,6 +24,8 @@ func NewContainer() (*Container, error) {
 	// Инициализация конфигурации
 	dbConfig := config.NewDatabaseConfig()
 	botConfig := config.NewBotConfig()
+	faqConfig := config.NewFAQConfig()
+	browserlessConfig := config.NewBrowserlessConfig()
 
 	// Инициализация базы данных
 	db, err := database.NewPostgresDB(dbConfig)
@@ -51,7 +53,7 @@ func NewContainer() (*Container, error) {
 	}
 
 	// Инициализация сервиса ответа на вопросы
-	faqManager, err := faq.NewFAQManager("/Users/mleykhner/GolandProjects/PriemBot/conf/faqlist.yaml") // путь к вашему YAML
+	faqManager, err := faq.NewFAQManager(faqConfig) // путь к вашему YAML
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +66,7 @@ func NewContainer() (*Container, error) {
 
 	userRepo := repository.NewUserRepository()
 	scraperRepo := repository.NewArticleRepository()
-	scraperService := service.NewScraperService(scraperRepo, userRepo, telegramBot.GetBot(), db.GetDB(), "/Users/mleykhner/GolandProjects/PriemBot/conf/browserless.js")
+	scraperService := service.NewScraperService(scraperRepo, userRepo, telegramBot.GetBot(), db.GetDB(), browserlessConfig)
 	scraperService.StartScheduler()
 
 	// Инициализация обработчиков бота

@@ -1,5 +1,6 @@
 package models
 
 type FAQList struct {
-	FAQs []FAQ `yaml:"faqs"`
+	Info string `yaml:"info"`
+	FAQs []FAQ  `yaml:"faqs"`
 }

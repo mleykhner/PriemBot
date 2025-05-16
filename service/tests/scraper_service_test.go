@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"PriemBot/config"
 	"PriemBot/scraper/mocks"
 	scraperModels "PriemBot/scraper/models"
 	"PriemBot/service"
@@ -83,8 +84,8 @@ func TestScraperService_TryRunAndNotify(t *testing.T) {
 			mockUserRepo := &repoMocks.MockUserRepository{}
 			mockBrowserless := &mocks.MockBrowserlessClient{}
 			tt.mockSetup(mockArticleRepo, mockUserRepo, mockBrowserless)
-
-			scraperService := service.NewScraperService(mockArticleRepo, mockUserRepo, &telebot.Bot{}, nil, "")
+			mockConfig := &config.BrowserlessConfig{FilePath: ""}
+			scraperService := service.NewScraperService(mockArticleRepo, mockUserRepo, &telebot.Bot{}, nil, mockConfig)
 			scraperService.TryRunAndNotify()
 		})
 	}

@@ -17,5 +17,16 @@ services:
     ports:
       - "3000:3000"
 
+  priembot:
+    build: .
+    container_name: priembot
+    env_file:
+      - "./conf/.env"
+    volumes:
+      - "./conf:/data"
+    depends_on:
+      - postgres
+      - browserless
+
 volumes:
   postgres_data:
