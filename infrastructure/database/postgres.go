@@ -60,8 +60,8 @@ func (p *PostgresDB) AutoMigrate() error {
 		&models.User{},
 		&models.Dialog{},
 		&models.Message{},
-		&models.DialogNotification{},
 		&models.Invite{},
+		&models.Article{},
 	)
 }
 

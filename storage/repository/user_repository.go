@@ -11,6 +11,7 @@ type UserRepository interface {
 	UpdateUser(user *models.User, tx *gorm.DB) error
 	SetUserRoleByTelegramID(id int64, role models.UserRole, tx *gorm.DB) (*models.User, error)
 	GetOperators(tx *gorm.DB) ([]models.User, error)
+	GetApplicants(tx *gorm.DB) ([]models.User, error)
 	GetUserByTelegramID(telegramID int64, tx *gorm.DB) (*models.User, error)
 }
 
@@ -54,6 +55,14 @@ func (u UserRepositoryImpl) GetOperators(tx *gorm.DB) ([]models.User, error) {
 		return nil, err
 	}
 	return operators, nil
+}
+
+func (u UserRepositoryImpl) GetApplicants(tx *gorm.DB) ([]models.User, error) {
+	var applicants []models.User
+	if err := tx.Where("role = ?", models.RoleApplicant).Find(&applicants).Error; err != nil {
+		return nil, err
+	}
+	return applicants, nil
 }
 
 func (u UserRepositoryImpl) GetUserByTelegramID(telegramID int64, tx *gorm.DB) (*models.User, error) {

@@ -2,6 +2,7 @@ package di
 
 import (
 	"PriemBot/config"
+	"PriemBot/faq"
 	"PriemBot/infrastructure/bot"
 	"PriemBot/infrastructure/database"
 	"PriemBot/service"
@@ -15,6 +16,8 @@ type Container struct {
 	DB             *database.PostgresDB
 	Bot            *bot.TelegramBot
 	BotHandlers    *bot.Handlers
+	FAQManager     *faq.Manager
+	ScraperService service.ScraperService
 }
 
 func NewContainer() (*Container, error) {
@@ -46,14 +49,25 @@ func NewContainer() (*Container, error) {
 		return nil, err
 	}
 
+	// Инициализация сервиса ответа на вопросы
+	faqManager, err := faq.NewFAQManager("/Users/mleykhner/GolandProjects/PriemBot/conf/faqlist.yaml") // путь к вашему YAML
+	if err != nil {
+		return nil, err
+	}
+
 	// Инициализация бота
 	telegramBot, err := bot.NewTelegramBot(botConfig)
 	if err != nil {
 		return nil, err
 	}
 
+	userRepo := repository.NewUserRepository()
+	scraperRepo := repository.NewArticleRepository()
+	scraperService := service.NewScraperService(scraperRepo, userRepo, telegramBot.GetBot(), db.GetDB(), "/Users/mleykhner/GolandProjects/PriemBot/conf/browserless.js")
+	scraperService.StartScheduler()
+
 	// Инициализация обработчиков бота
-	botHandlers := bot.NewBotHandlers(telegramBot, userService, dialogsService)
+	botHandlers := bot.NewBotHandlers(telegramBot, userService, dialogsService, faqManager)
 	botHandlers.RegisterHandlers()
 
 	return &Container{
@@ -63,6 +77,8 @@ func NewContainer() (*Container, error) {
 		DB:             db,
 		Bot:            telegramBot,
 		BotHandlers:    botHandlers,
+		FAQManager:     faqManager,
+		ScraperService: *scraperService,
 	}, nil
 }
 

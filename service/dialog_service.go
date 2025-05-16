@@ -24,28 +24,20 @@ type DialogsService interface {
 
 	GetDialogMessages(dialogID uint) ([]models.Message, error)
 
-	CreateDialogNotification(dialogID uint, telegramMessageID int) error
-
-	DeleteNotification(id uint) error
-
-	DeleteAllDialogNotifications(dialogID uint) error
-
 	UpdateDialog(dialog *models.Dialog) error
 }
 
 type DialogsServiceImpl struct {
-	dialogRepo       repository.DialogRepository
-	messageRepo      repository.MessageRepository
-	notificationRepo repository.DialogNotificationRepository
-	db               *gorm.DB
+	dialogRepo  repository.DialogRepository
+	messageRepo repository.MessageRepository
+	db          *gorm.DB
 }
 
 func NewDialogsService(db *gorm.DB) DialogsService {
 	return &DialogsServiceImpl{
-		dialogRepo:       repository.NewDialogRepository(),
-		messageRepo:      repository.NewMessageRepository(),
-		notificationRepo: repository.NewDialogNotificationRepository(),
-		db:               db,
+		dialogRepo:  repository.NewDialogRepository(),
+		messageRepo: repository.NewMessageRepository(),
+		db:          db,
 	}
 }
 
@@ -79,18 +71,6 @@ func (s *DialogsServiceImpl) CreateMessage(dialogID uint, senderID int64, text s
 
 func (s *DialogsServiceImpl) GetDialogMessages(dialogID uint) ([]models.Message, error) {
 	return s.messageRepo.GetDialogMessages(dialogID, s.db)
-}
-
-func (s *DialogsServiceImpl) CreateDialogNotification(dialogID uint, telegramMessageID int) error {
-	return s.notificationRepo.CreateNotification(dialogID, telegramMessageID, s.db)
-}
-
-func (s *DialogsServiceImpl) DeleteNotification(id uint) error {
-	return s.notificationRepo.DeleteByID(id, s.db)
-}
-
-func (s *DialogsServiceImpl) DeleteAllDialogNotifications(dialogID uint) error {
-	return s.notificationRepo.DeleteAllByDialogID(dialogID, s.db)
 }
 
 func (s *DialogsServiceImpl) UpdateDialog(dialog *models.Dialog) error {

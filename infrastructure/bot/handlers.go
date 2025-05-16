@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"PriemBot/faq"
 	"PriemBot/service"
 	"PriemBot/storage/models"
 	"errors"
@@ -16,13 +17,15 @@ type Handlers struct {
 	bot            *TelegramBot
 	userService    service.UserService
 	dialogsService service.DialogsService
+	faqManager     *faq.Manager
 }
 
-func NewBotHandlers(bot *TelegramBot, userService service.UserService, dialogsService service.DialogsService) *Handlers {
+func NewBotHandlers(bot *TelegramBot, userService service.UserService, dialogsService service.DialogsService, faqManager *faq.Manager) *Handlers {
 	return &Handlers{
 		bot:            bot,
 		userService:    userService,
 		dialogsService: dialogsService,
+		faqManager:     faqManager,
 	}
 }
 
@@ -31,6 +34,7 @@ func (h *Handlers) RegisterHandlers() {
 
 	bot.Handle("/start", h.handleStartMessage)
 	bot.Handle("/newop", h.handleNewOpMessage)
+	bot.Handle("/faq", h.handleFAQ)
 	// Обработка текстовых сообщений
 	bot.Handle(tele.OnText, h.handleTextMessage)
 
@@ -148,7 +152,7 @@ func (h *Handlers) handleApplicantMessage(c tele.Context, user *models.User) err
 
 		// Отправляем уведомления всем операторам
 		for _, operator := range operators {
-			msg, err := h.bot.GetBot().Send(
+			_, err := h.bot.GetBot().Send(
 				&tele.User{ID: operator.TelegramID},
 				fmt.Sprintf("Новый диалог от абитуриента @%s", user.Name),
 				&tele.ReplyMarkup{
@@ -160,12 +164,6 @@ func (h *Handlers) handleApplicantMessage(c tele.Context, user *models.User) err
 					},
 				},
 			)
-			if err != nil {
-				continue
-			}
-
-			// Сохраняем уведомление в БД
-			err = h.dialogsService.CreateDialogNotification(dialog.ID, msg.ID)
 			if err != nil {
 				continue
 			}
@@ -224,6 +222,9 @@ func (h *Handlers) handleOperatorMessage(c tele.Context, user *models.User) erro
 }
 
 func (h *Handlers) handleCallback(c tele.Context) error {
+	if strings.Contains(c.Callback().Data, "faq_q") {
+		return h.handleFAQBtn(c)
+	}
 	// Получаем пользователя
 	user, err := h.userService.GetUserByTelegramID(c.Sender().ID)
 	if err != nil {
@@ -252,12 +253,6 @@ func (h *Handlers) handleCallback(c tele.Context) error {
 		err = h.dialogsService.AssignOperator(uint(dialogID), user.TelegramID)
 		if err != nil {
 			return c.Send("Произошла ошибка при назначении оператора")
-		}
-
-		// Удаляем все уведомления о диалоге
-		err = h.dialogsService.DeleteAllDialogNotifications(uint(dialogID))
-		if err != nil {
-			return c.Send("Произошла ошибка при удалении уведомлений")
 		}
 
 		// Отправляем сообщение оператору
@@ -348,4 +343,43 @@ func (h *Handlers) handleByeCommand(c tele.Context, user *models.User) error {
 	}
 
 	return nil
+}
+
+func (h *Handlers) handleFAQ(c tele.Context) error {
+	faqs := h.faqManager.List()
+	if len(faqs) == 0 {
+		return c.Send("Часто задаваемых вопросов нет.")
+	}
+
+	var menu [][]tele.InlineButton
+	for _, f := range faqs {
+		btn := tele.InlineButton{
+			Unique: "faq_q",
+			Text:   f.Question,
+			Data:   strconv.Itoa(f.ID),
+		}
+		menu = append(menu, []tele.InlineButton{btn})
+	}
+	markup := &tele.ReplyMarkup{InlineKeyboard: menu}
+	return c.Send("Выберите вопрос:", markup)
+}
+
+func (h *Handlers) handleFAQBtn(c tele.Context) error {
+	data := c.Callback().Data
+	idSubs := strings.Split(data, "|")
+	idNum, err := strconv.ParseInt(idSubs[len(idSubs)-1], 10, 32)
+	if err != nil {
+		return c.Send("Вопрос не найден.")
+	}
+	f, ok := h.faqManager.Get(int(idNum))
+	if !ok {
+		return c.Respond(&tele.CallbackResponse{
+			Text:      "Вопрос не найден.",
+			ShowAlert: true,
+		})
+	}
+	// Уберите крутилку ожидания
+	_ = c.Respond(&tele.CallbackResponse{})
+	// Можно use c.Edit вместо c.Send чтобы менять исходное сообщение
+	return c.Send(f.Answer, &tele.SendOptions{ParseMode: tele.ModeMarkdown})
 }
