@@ -38,10 +38,11 @@ func NewContainer() (*Container, error) {
 
 	// Инициализация репозиториев
 	inviteRepo := repository.NewInviteRepository()
-
+	dialogRepo := repository.NewDialogRepository()
+	messageRepo := repository.NewMessageRepository()
 	// Инициализация сервисов
 	userService := service.NewUserService(db.GetDB(), botConfig)
-	dialogsService := service.NewDialogsService(db.GetDB())
+	dialogsService := service.NewDialogsService(dialogRepo, messageRepo, db.GetDB())
 	initService := service.NewInitService(userService, inviteRepo, db.GetDB())
 
 	// Проверка наличия операторов и создание приглашения при необходимости

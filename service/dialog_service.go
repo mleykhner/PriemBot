@@ -33,10 +33,10 @@ type DialogsServiceImpl struct {
 	db          *gorm.DB
 }
 
-func NewDialogsService(db *gorm.DB) DialogsService {
+func NewDialogsService(dialogRepo repository.DialogRepository, messageRepo repository.MessageRepository, db *gorm.DB) DialogsService {
 	return &DialogsServiceImpl{
-		dialogRepo:  repository.NewDialogRepository(),
-		messageRepo: repository.NewMessageRepository(),
+		dialogRepo:  dialogRepo,
+		messageRepo: messageRepo,
 		db:          db,
 	}
 }
