@@ -12,10 +12,11 @@ import (
 )
 
 type Manager struct {
-	path     string
-	faqList  models.FAQList
-	faqIndex map[int]models.FAQ
-	mu       sync.RWMutex
+	path      string
+	faqList   models.FAQList
+	faqIndex  map[int]models.FAQ
+	infoIndex map[int]models.InfoArticle
+	mu        sync.RWMutex
 }
 
 func NewFAQManager(config *config.FAQConfig) (*Manager, error) {
@@ -40,9 +41,14 @@ func (m *Manager) reload() error {
 	for _, f := range list.FAQs {
 		idx[f.ID] = f
 	}
+	idxa := make(map[int]models.InfoArticle)
+	for _, f := range list.InfoArticles {
+		idxa[f.ID] = f
+	}
 	m.mu.Lock()
 	m.faqList = list
 	m.faqIndex = idx
+	m.infoIndex = idxa
 	m.mu.Unlock()
 	return nil
 }
@@ -79,13 +85,13 @@ func (m *Manager) watch() {
 	}
 }
 
-func (m *Manager) List() []models.FAQ {
+func (m *Manager) ListFAQ() []models.FAQ {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return append([]models.FAQ(nil), m.faqList.FAQs...) // копия
 }
 
-func (m *Manager) Get(id int) (models.FAQ, bool) {
+func (m *Manager) GetFAQ(id int) (models.FAQ, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	f, ok := m.faqIndex[id]
@@ -94,4 +100,17 @@ func (m *Manager) Get(id int) (models.FAQ, bool) {
 
 func (m *Manager) Info() string {
 	return m.faqList.Info
+}
+
+func (m *Manager) ListInfoArticles() []models.InfoArticle {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return append([]models.InfoArticle(nil), m.faqList.InfoArticles...)
+}
+
+func (m *Manager) GetInfoArticle(id int) (models.InfoArticle, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	f, ok := m.infoIndex[id]
+	return f, ok
 }

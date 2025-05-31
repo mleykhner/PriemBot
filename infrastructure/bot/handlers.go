@@ -80,7 +80,7 @@ func (h *Handlers) handleStartMessage(c tele.Context) error {
 	}
 
 	if len(payload) == 0 && user.Role == models.RoleApplicant {
-		err := c.Send("Привет, абитуриент")
+		err := c.Send("*Привет, абитуриент!*\nДобро пожаловать в бот приемной комиссии МАИ!\n\nЧтобы начать работу, нажми на кнопку «Меню»", tele.ModeMarkdown)
 		if err != nil {
 			return err
 		}
@@ -227,6 +227,9 @@ func (h *Handlers) handleCallback(c tele.Context) error {
 	if strings.Contains(c.Callback().Data, "faq_q") {
 		return h.handleFAQBtn(c)
 	}
+	if strings.Contains(c.Callback().Data, "info_a") {
+		return h.handleInfoBtn(c)
+	}
 	// Получаем пользователя
 	user, err := h.userService.GetUserByTelegramID(c.Sender().ID)
 	if err != nil {
@@ -348,7 +351,7 @@ func (h *Handlers) handleByeCommand(c tele.Context, user *models.User) error {
 }
 
 func (h *Handlers) handleFAQ(c tele.Context) error {
-	faqs := h.faqManager.List()
+	faqs := h.faqManager.ListFAQ()
 	if len(faqs) == 0 {
 		return c.Send("Часто задаваемых вопросов нет.")
 	}
@@ -367,7 +370,22 @@ func (h *Handlers) handleFAQ(c tele.Context) error {
 }
 
 func (h *Handlers) handleInfo(c tele.Context) error {
-	return c.Send(h.faqManager.Info())
+	infos := h.faqManager.ListInfoArticles()
+	if len(infos) == 0 {
+		return c.Send(h.faqManager.Info())
+	}
+
+	var menu [][]tele.InlineButton
+	for _, f := range infos {
+		btn := tele.InlineButton{
+			Unique: "info_a",
+			Text:   f.Title,
+			Data:   strconv.Itoa(f.ID),
+		}
+		menu = append(menu, []tele.InlineButton{btn})
+	}
+	markup := &tele.ReplyMarkup{InlineKeyboard: menu}
+	return c.Send(h.faqManager.Info(), markup)
 }
 
 func (h *Handlers) handleFAQBtn(c tele.Context) error {
@@ -377,7 +395,7 @@ func (h *Handlers) handleFAQBtn(c tele.Context) error {
 	if err != nil {
 		return c.Send("Вопрос не найден.")
 	}
-	f, ok := h.faqManager.Get(int(idNum))
+	f, ok := h.faqManager.GetFAQ(int(idNum))
 	if !ok {
 		return c.Respond(&tele.CallbackResponse{
 			Text:      "Вопрос не найден.",
@@ -388,4 +406,24 @@ func (h *Handlers) handleFAQBtn(c tele.Context) error {
 	_ = c.Respond(&tele.CallbackResponse{})
 	// Можно use c.Edit вместо c.Send чтобы менять исходное сообщение
 	return c.Send(f.Answer, &tele.SendOptions{ParseMode: tele.ModeMarkdown})
+}
+
+func (h *Handlers) handleInfoBtn(c tele.Context) error {
+	data := c.Callback().Data
+	idSubs := strings.Split(data, "|")
+	idNum, err := strconv.ParseInt(idSubs[len(idSubs)-1], 10, 32)
+	if err != nil {
+		return c.Send("Вопрос не найден.")
+	}
+	f, ok := h.faqManager.GetInfoArticle(int(idNum))
+	if !ok {
+		return c.Respond(&tele.CallbackResponse{
+			Text:      "Вопрос не найден.",
+			ShowAlert: true,
+		})
+	}
+
+	_ = c.Respond(&tele.CallbackResponse{})
+	text := fmt.Sprintf("*%s*\n\n%s", f.Title, f.Text)
+	return c.Send(text, &tele.SendOptions{ParseMode: tele.ModeMarkdown})
 }
